@@ -16,6 +16,12 @@ public class ST extends javax.swing.JFrame {
     Map<String, Line.Info> mapaMicrofones;
     Map<Double, String> mapaFrequencias;
     TargetDataLine targetDataLine;
+    AudioFormat format;
+    float sampleRate = 44100;
+    int sampleSizeInBits = 16;
+    int channels = 1;
+    boolean signed = true;
+    boolean bigEndian = false;
     private static final double[] FREQUENCIES = {146.83, 138.59, 130.81, 123.47, 116.54, 110.00, 103.83, 98.00, 92.50, 87.31, 82.41, 77.78};
     private static final String[] NAME = {"D", "C#", "C", "B", "A#", "A", "G#", "G", "F#", "F", "E", "D#"};
 
@@ -23,20 +29,32 @@ public class ST extends javax.swing.JFrame {
         initComponents();
         this.setLocationRelativeTo(null);
         carregarMicrofones();
-        setUp(mapaMicrofones.get((String) cbMicrofones.getSelectedItem()));
+        criaFreq();
+        setUp();
+    }
+    
+    public void setUp(){  
+        try {     
+            format = new AudioFormat(sampleRate, sampleSizeInBits, channels, signed, bigEndian); 
+            Line.Info dataLineInfo;
+            if(cbMicrofones.getSelectedIndex()==0){      
+                dataLineInfo = new DataLine.Info(TargetDataLine.class, format);    
+            }else{                
+                dataLineInfo = mapaMicrofones.get((String) cbMicrofones.getSelectedItem());
+            }      
+            targetDataLine = (TargetDataLine) AudioSystem.getLine(dataLineInfo);
+            testaMic();
+        } catch (LineUnavailableException lue) {
+            JOptionPane.showMessageDialog(null, lue.getMessage());
+        }
+    }
+    
+    public void testaMic(){
+        telaSaida.setText(telaSaida.getText()+"\n"+targetDataLine);
     }
 
-    public void setUp(Line.Info lineInfo) {
+    public void executa() {
         try {
-            float sampleRate = 44100;
-            int sampleSizeInBits = 16;
-            int channels = 1;
-            boolean signed = true;
-            boolean bigEndian = false;
-            AudioFormat format = new AudioFormat(sampleRate, sampleSizeInBits, channels, signed, bigEndian);
-            DataLine.Info dataLineInfo = new DataLine.Info(TargetDataLine.class, format);
-            targetDataLine = (TargetDataLine) AudioSystem.getLine(dataLineInfo);
-
             targetDataLine.open(format, (int) sampleRate);
             targetDataLine.start();
 
@@ -111,7 +129,6 @@ public class ST extends javax.swing.JFrame {
                 } catch (Exception e) {
                 }
             }
-
         } catch (LineUnavailableException lue) {
             JOptionPane.showMessageDialog(null, lue.getMessage());
         }
@@ -125,22 +142,23 @@ public class ST extends javax.swing.JFrame {
             }
         }
     }
-    
-    private static int closestNote(double hz) {
-        double minDist = Double.MAX_VALUE;
-        int minFreq = -1;
-        for (int i = 0; i < FREQUENCIES.length; i++) {
-            double dist = Math.abs(FREQUENCIES[i] - hz);
-            if (dist < minDist) {
-                minDist = dist;
-                minFreq = i;
+        
+    private String notaMaisProxima(double hz) {  
+        double distanciaMinima = Double.MAX_VALUE; 
+        double distancia = 0;
+        String nota = "";
+        for (double freq : mapaFrequencias.keySet()) {            
+            distancia = Math.abs(freq - hz);
+            if (distancia < distanciaMinima) {
+                distanciaMinima = distancia;
+                nota = mapaFrequencias.get(freq);
             }
         }
-        return minFreq;
+        return nota;
     }
 
     public void carregarMicrofones() {
-        cbMicrofones.setModel(new javax.swing.DefaultComboBoxModel(new String[]{}));
+        cbMicrofones.setModel(new javax.swing.DefaultComboBoxModel(new String[]{"Selecione..."}));
         try {
             mapaMicrofones = listarMicrofones();
             for (String microfone : mapaMicrofones.keySet()) {
@@ -210,7 +228,7 @@ public class ST extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void cbMicrofonesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbMicrofonesActionPerformed
-        setUp(mapaMicrofones.get((String) cbMicrofones.getSelectedItem()));
+        setUp();
     }//GEN-LAST:event_cbMicrofonesActionPerformed
 
     public static void main(String args[]) {
