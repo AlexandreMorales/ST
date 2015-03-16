@@ -32,25 +32,40 @@ public class ST extends javax.swing.JFrame {
         criaFreq();
         setUp();
     }
-    
-    public void setUp(){  
-        try {     
-            format = new AudioFormat(sampleRate, sampleSizeInBits, channels, signed, bigEndian); 
+
+    public void setUp() {
+        try {
+            format = new AudioFormat(sampleRate, sampleSizeInBits, channels, signed, bigEndian);
             Line.Info dataLineInfo;
-            if(cbMicrofones.getSelectedIndex()==0){      
-                dataLineInfo = new DataLine.Info(TargetDataLine.class, format);    
-            }else{                
+            if (cbMicrofones.getSelectedIndex() == 0) {
+                dataLineInfo = new DataLine.Info(TargetDataLine.class, format);
+            } else {
                 dataLineInfo = mapaMicrofones.get((String) cbMicrofones.getSelectedItem());
-            }      
+            }
             targetDataLine = (TargetDataLine) AudioSystem.getLine(dataLineInfo);
-            testaMic();
         } catch (LineUnavailableException lue) {
             JOptionPane.showMessageDialog(null, lue.getMessage());
         }
     }
     
-    public void testaMic(){
-        telaSaida.setText(telaSaida.getText()+"\n"+targetDataLine);
+    public void testaMic() {
+        try {
+            targetDataLine.open(format, (int) sampleRate);
+            targetDataLine.start();
+        } catch (LineUnavailableException lue) {
+            JOptionPane.showMessageDialog(null, lue.getMessage());
+        }
+        byte[] buffer = new byte[2 * 1200];
+
+        int n = -1;
+        while ((n = targetDataLine.read(buffer, 0, buffer.length)) > 0) {
+            telaSaida.setText(String.format("%.2fhz", format.getSampleRate()));
+            try {
+                Thread.sleep(250);
+            } catch (Exception e) {
+            }
+            targetDataLine.stop();
+        }
     }
 
     public void executa() {
@@ -91,7 +106,7 @@ public class ST extends javax.swing.JFrame {
                 }
                 if (sampleLen > 0) {
                     double frequency = (format.getSampleRate() / sampleLen);
-                    
+
                     /*freqLabel.setText(String.format("%.2fhz", frequency));
                     frequency = normaliseFreq(frequency);
                     int note = closestNote(frequency);
@@ -99,30 +114,30 @@ public class ST extends javax.swing.JFrame {
                     System.out.println(NAME[note]);
                     prevLabel.setText(NAME[note - 1]);
                     nextLabel.setText(NAME[note + 1]);
-
+                    
                     int value = 0;
                     double matchFreq = FREQUENCIES[note];
                     if (frequency < matchFreq) {
-                        double prevFreq = FREQUENCIES[note + 1];
-                        value = (int) (-FREQ_RANGE * (frequency - matchFreq) / (prevFreq - matchFreq));
+                    double prevFreq = FREQUENCIES[note + 1];
+                    value = (int) (-FREQ_RANGE * (frequency - matchFreq) / (prevFreq - matchFreq));
                     } else {
-                        double nextFreq = FREQUENCIES[note - 1];
-                        value = (int) (FREQ_RANGE * (frequency - matchFreq) / (nextFreq - matchFreq));
+                    double nextFreq = FREQUENCIES[note - 1];
+                    value = (int) (FREQ_RANGE * (frequency - matchFreq) / (nextFreq - matchFreq));
                     }
                     freqSlider.setValue(value);
-                } else {
+                    } else {
                     matchLabel.setText("--");
                     prevLabel.setText("--");
                     nextLabel.setText("--");
                     freqSlider.setValue(0);
                     freqLabel.setText("--");
-                }
-                prevLabel.setSize(prevLabel.getPreferredSize());
-                nextLabel.setSize(nextLabel.getPreferredSize());
-                matchLabel.setSize(matchLabel.getPreferredSize());
-
-                freqSlider.repaint();
-                freqLabel.repaint();*/
+                    }
+                    prevLabel.setSize(prevLabel.getPreferredSize());
+                    nextLabel.setSize(nextLabel.getPreferredSize());
+                    matchLabel.setSize(matchLabel.getPreferredSize());
+                    
+                    freqSlider.repaint();
+                    freqLabel.repaint();*/
                 }
                 try {
                     Thread.sleep(250);
@@ -133,21 +148,21 @@ public class ST extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(null, lue.getMessage());
         }
     }
-    
-    private void criaFreq(){
-        mapaFrequencias = new HashMap <Double, String>();
+
+    private void criaFreq() {
+        mapaFrequencias = new HashMap<Double, String>();
         for (int i = 0; i < 5; i++) {
-            for (int j = NAME.length-1; j >0; j--) {
-                mapaFrequencias.put(FREQUENCIES[j]*(i^2), NAME[j]);
+            for (int j = NAME.length - 1; j > 0; j--) {
+                mapaFrequencias.put(FREQUENCIES[j] * (i ^ 2), NAME[j]);
             }
         }
     }
-        
-    private String notaMaisProxima(double hz) {  
-        double distanciaMinima = Double.MAX_VALUE; 
+
+    private String notaMaisProxima(double hz) {
+        double distanciaMinima = Double.MAX_VALUE;
         double distancia = 0;
         String nota = "";
-        for (double freq : mapaFrequencias.keySet()) {            
+        for (double freq : mapaFrequencias.keySet()) {
             distancia = Math.abs(freq - hz);
             if (distancia < distanciaMinima) {
                 distanciaMinima = distancia;
@@ -189,6 +204,7 @@ public class ST extends javax.swing.JFrame {
         jScrollPane1 = new javax.swing.JScrollPane();
         telaSaida = new javax.swing.JTextArea();
         cbMicrofones = new javax.swing.JComboBox();
+        jbTeste = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -203,6 +219,13 @@ public class ST extends javax.swing.JFrame {
             }
         });
 
+        jbTeste.setText("Teste");
+        jbTeste.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jbTesteActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -211,7 +234,9 @@ public class ST extends javax.swing.JFrame {
                 .addContainerGap()
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 248, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(cbMicrofones, 0, 122, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(cbMicrofones, 0, 122, Short.MAX_VALUE)
+                    .addComponent(jbTeste))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -219,7 +244,10 @@ public class ST extends javax.swing.JFrame {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(cbMicrofones, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(cbMicrofones, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 235, Short.MAX_VALUE)
+                        .addComponent(jbTeste))
                     .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 278, Short.MAX_VALUE))
                 .addContainerGap())
         );
@@ -230,6 +258,10 @@ public class ST extends javax.swing.JFrame {
     private void cbMicrofonesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbMicrofonesActionPerformed
         setUp();
     }//GEN-LAST:event_cbMicrofonesActionPerformed
+
+    private void jbTesteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbTesteActionPerformed
+        testaMic();
+    }//GEN-LAST:event_jbTesteActionPerformed
 
     public static void main(String args[]) {
         try {
@@ -258,6 +290,7 @@ public class ST extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JComboBox cbMicrofones;
     private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JButton jbTeste;
     private javax.swing.JTextArea telaSaida;
     // End of variables declaration//GEN-END:variables
 }
